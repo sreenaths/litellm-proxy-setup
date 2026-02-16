@@ -23,7 +23,7 @@ import pwd
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
-from git import Repo, InvalidGitRepositoryError, GitCommandError
+from git import Repo, InvalidGitRepositoryError, GitCommandError, Actor
 
 
 class BackupManager:
@@ -101,12 +101,14 @@ class BackupManager:
         repo.git.add(A=True)
 
         msg = f"Updated {updated} files"
-        repo.index.commit(msg)
+        author = Actor("git-backup-watcher", "git-backup-watcher@noreply.local")
+        repo.index.commit(msg, author=author, committer=author)
 
         # Push (assumes a configured remote, typically "origin", and current branch set up)
         try:
             # Prefer pushing active branch to its upstream
             repo.git.push()
+            print(f"[watcher] Commit successful - {msg}")
         except GitCommandError:
             # Fallback: try origin if default push fails
             if "origin" in [r.name for r in repo.remotes]:
