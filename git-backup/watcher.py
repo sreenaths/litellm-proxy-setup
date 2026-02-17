@@ -93,7 +93,7 @@ class BackupManager:
         # rsync returns 0 on success, non-zero on error
         subprocess.run(cmd, check=True)
 
-    def get_change_details(self, repo: Repo) -> tuple[int, list[str]]:
+    def get_stage_details(self, repo: Repo) -> tuple[int, list[str]]:
         """
         Count changed files after rsync.
         Uses `git status --porcelain` which yields one line per changed path.
@@ -131,14 +131,16 @@ class BackupManager:
 
         repo = Repo(str(self.target_repo))
 
-        updated_count, tags = self.get_change_details(repo)
-        if updated_count == 0:
-            return
-
         # Stage everything (including deletions)
         repo.git.add(A=True)
 
-        msg = f"Updated {updated_count} files - {', '.join(tags)}"
+        # Get details, and skip if no changes
+        file_count, tags = self.get_stage_details(repo)
+        if file_count == 0:
+            return
+
+        # Commit changes
+        msg = f"Updated {file_count} files - {', '.join(tags)}"
         author = Actor("git-backup-watcher", "git-backup-watcher@noreply.local")
         repo.index.commit(msg, author=author, committer=author)
 
